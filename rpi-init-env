@@ -1,0 +1,73 @@
+#!/bin/sh
+
+#
+# Normally this is called as '. ./rpi-init-env <builddir>'
+#
+# This works in most shells (not dash), but not all of them pass the arguments
+# when being sourced.  To workaround the shell limitation use "set <builddir>"
+# prior to sourcing this script.
+#
+# default builddir is 'rpi-build'
+
+usage () {
+	echo "Setup build enviroment for 'rpi' yocto builds"
+	echo "usage:"
+	echo "   source rpi-init-env"
+	echo ""
+	echo "default builddir is ${BUILD_DIR}"
+}
+
+
+if [ -n "$BASH_SOURCE" ]; then
+    THIS_SCRIPT=$BASH_SOURCE
+    BDIR="$1"
+elif [ -n "$ZSH_NAME" ]; then
+    THIS_SCRIPT=$0
+    BDIR="$1"
+else
+    THIS_SCRIPT="$(pwd)/rpi-init-env"
+    BDIR="$1"
+fi
+
+if [ -z "$ZSH_NAME" ] && [ "$0" == "$THIS_SCRIPT" ]; then
+    echo "Error: This script needs to be sourced. Please run as '. $THIS_SCRIPT'"
+    usage
+    exit 1
+fi
+#echo "$THIS_SCRIPT"
+
+if [ -z "${BDIR}" ]; then
+	BDIR="rpi-build"
+fi
+
+#echo "bdir: ${BDIR}"
+
+if [ -z "$OEROOT" ]; then
+    OEROOT=$(dirname "$THIS_SCRIPT")
+    OEROOT=$(readlink -f "$OEROOT")
+    # sourced script is in meta-rpi
+    if echo "${OEROOT}" | grep 'meta-rpi$' > /dev/null; then
+
+	    OEROOT=$(echo $OEROOT | sed 's/meta-rpi//g')
+    fi
+fi
+#echo $OEROOT
+unset THIS_SCRIPT
+
+# POKY_DIR is the directory where 'oe-init-build-env' script exists
+POKY_DIR="${OEROOT}/sources/poky"
+
+TEMPLATECONF="${OEROOT}/meta-rpi/conf/"
+if [ -f "{TEMPLATECONF}/local.conf.sample" ]; then
+	echo "Error: Could not find 'local.conf.sample' in ${TEMPLATECONF}"
+	usage
+	return 1
+fi
+unset OEROOT
+
+export TEMPLATECONF
+#echo "${TEMPLATECONF}"
+
+source "${POKY_DIR}/oe-init-build-env" "$BDIR"
+unset TEMPLATECONF
+unset BDIR
